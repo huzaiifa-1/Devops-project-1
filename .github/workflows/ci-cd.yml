@@ -1,0 +1,46 @@
+name: CI-CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Build & Push Backend Image
+      - name: Build & Push Backend
+        run: |
+          docker build -t huzaifa8901/backend:latest backend
+          docker push huzaifa8901/backend:latest
+
+      # 4. Build & Push Frontend Image
+      - name: Build & Push Frontend
+        run: |
+          docker build -t huzaifa8901/frontend:latest frontend
+          docker push huzaifa8901/frontend:latest
+
+      # 5. Deploy to EC2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd Devops-project-1
+            docker-compose pull
+            docker-compose up -d
